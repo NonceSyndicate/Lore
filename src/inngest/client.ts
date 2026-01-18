@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import { Inngest } from 'inngest';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_ANON_KEY!;
+// Use service key for server-side operations, fallback to anon key
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -16,7 +18,7 @@ export type AgentType = 'AUDITOR' | 'NEGOTIATOR' | 'OPERATOR' | 'RESEARCHER' | '
 export interface AgentState {
   id: string;
   agent_type: AgentType;
-  status: 'idle' | 'working' | 'blocked';
+  status: 'idle' | 'active' | 'busy';
   current_task_id?: string;
   last_active: string;
   metadata: Record<string, any>;

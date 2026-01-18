@@ -10,8 +10,9 @@
     "deploy": "inngest deploy"
   },
   "dependencies": {
-    "inngest": "^3.0.0",
     "@supabase/supabase-js": "^2.38.0",
+    "dotenv": "^16.6.1",
+    "inngest": "^3.0.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
