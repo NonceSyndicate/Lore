@@ -1,0 +1,130 @@
+name: Service Request
+description: Request a service from Nonce Syndicate
+title: "[Service Request] "
+labels: ["service-request", "needs-triage"]
+assignees:
+  - noncesyndicate-signer
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Request a Service from Nonce Syndicate
+        
+        Thank you for your interest in Nonce Syndicate's services. Please fill out this form to request a service. The Signer will review and respond within 24 hours.
+        
+        **Note:** All service requests and responses are logged publicly unless you specifically request confidential handling.
+
+  - type: dropdown
+    id: service-tier
+    attributes:
+      label: Service Tier
+      description: Which service tier are you requesting?
+      options:
+        - "Tier 1: Free/Tips (Nonce Analysis, Quick Code Review, Open-Source Tools)"
+        - "Tier 2: Paid (Security Audit, Consulting, Research Report, Custom Automation)"
+        - "Tier 3: Retainer/Partnership"
+        - "Not sure - Need guidance"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: service-type
+    attributes:
+      label: Specific Service
+      description: What specific service do you need?
+      options:
+        - "Nonce Analysis"
+        - "Quick Code Review (<200 lines)"
+        - "Open-Source Tool Request"
+        - "Comprehensive Security Audit"
+        - "Strategic Consulting"
+        - "Research & Analysis Report"
+        - "Custom Automation"
+        - "Monthly Retainer"
+        - "Other (describe below)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: project-description
+    attributes:
+      label: Project Description
+      description: Briefly describe your project or the context for this request
+      placeholder: "e.g., DeFi protocol for cross-chain swaps, NFT marketplace with auction mechanics, etc."
+    validations:
+      required: true
+
+  - type: textarea
+    id: service-details
+    attributes:
+      label: Service Details
+      description: What specifically do you need help with?
+      placeholder: |
+        For audits: Link to repository, contract addresses, lines of code estimate
+        For consulting: Key questions or challenges you're facing
+        For research: Topic and depth required
+        For tools: Feature requirements and use case
+    validations:
+      required: true
+
+  - type: input
+    id: timeline
+    attributes:
+      label: Timeline
+      description: When do you need this completed?
+      placeholder: "e.g., Within 2 weeks, Flexible, ASAP"
+    validations:
+      required: false
+
+  - type: input
+    id: budget
+    attributes:
+      label: Budget (Optional)
+      description: Do you have a budget in mind? (for paid services)
+      placeholder: "e.g., 0.5 ETH, Flexible within Tier 2 pricing, Open to discussion"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: confidentiality
+    attributes:
+      label: Confidentiality Requirements
+      description: Do you need confidential handling?
+      options:
+        - "Public engagement (logged with all details)"
+        - "Sanitized (log service type but hide project details)"
+        - "Discuss confidentiality requirements"
+    validations:
+      required: true
+
+  - type: input
+    id: contact-method
+    attributes:
+      label: Preferred Contact Method
+      description: How should we reach you? (GitHub username, Telegram, email, dial.wtf)
+      placeholder: "@username, telegram: @handle, email: user@example.com"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that might be helpful?
+      placeholder: "Links to documentation, specific concerns, relevant background, etc."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Acknowledgments
+      description: Please confirm you understand the following:
+      options:
+        - label: I understand that this is a public request and may be logged in Nonce Syndicate's operational logs
+          required: true
+        - label: I understand that paid services require upfront payment to the multi-sig wallet
+          required: false
+        - label: I have reviewed the service offerings at /docs/service-offerings.md
+          required: false
