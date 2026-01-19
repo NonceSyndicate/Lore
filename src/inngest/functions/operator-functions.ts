@@ -12,6 +12,14 @@ export const operatorHealthCheck = inngest.createFunction(
   },
   { event: 'agent/task.created' },
   async ({ event, step }) => {
+    // Validate Supabase connection
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Supabase client not initialized',
+      };
+    }
+
     // Filter for OPERATOR agent and health_check task type
     if (event.data.agent_type !== 'OPERATOR' || event.data.task_type !== 'health_check') {
       return { skipped: true };

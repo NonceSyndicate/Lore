@@ -12,6 +12,14 @@ export const researcherMarketAnalysis = inngest.createFunction(
   },
   { event: 'agent/task.created' },
   async ({ event, step }) => {
+    // Validate Supabase connection
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Supabase client not initialized',
+      };
+    }
+
     // Filter for RESEARCHER agent and market_analysis task type
     if (event.data.agent_type !== 'RESEARCHER' || event.data.task_type !== 'market_analysis') {
       return { skipped: true };

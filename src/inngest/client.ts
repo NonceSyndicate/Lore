@@ -1,14 +1,18 @@
 import { Inngest } from 'inngest';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client (conditional for build-time safety)
-export const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) ||
-    (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  ? createClient(
-      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-  : null;
+// Initialize Supabase client - Required for runtime operations
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    'Missing required Supabase environment variables. ' +
+    'Set SUPABASE_URL and SUPABASE_ANON_KEY (or NEXT_PUBLIC_* variants)'
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Initialize Inngest client
 export const inngest = new Inngest({ id: 'nonce-syndicate-lore' });

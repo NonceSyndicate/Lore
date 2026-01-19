@@ -12,6 +12,14 @@ export const scribeDocumentUpdate = inngest.createFunction(
   },
   { event: 'agent/task.created' },
   async ({ event, step }) => {
+    // Validate Supabase connection
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Supabase client not initialized',
+      };
+    }
+
     // Filter for SCRIBE agent and document_update task type
     if (event.data.agent_type !== 'SCRIBE' || event.data.task_type !== 'document_update') {
       return { skipped: true };
