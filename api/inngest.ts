@@ -8,7 +8,6 @@ import { functions } from '@/src/inngest';
  * Compatible with Next.js App Router and Vercel deployment
  */
 
-export const { GET, POST, PUT } = serve({
-  client: inngest,
+export default serve({  client: inngest,
   functions,
 });
