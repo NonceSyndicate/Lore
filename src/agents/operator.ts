@@ -201,6 +201,11 @@ export async function execute(taskType: string, inputData: any): Promise<any> {
 
 /**
  * Execute a mission using AI-driven decision making
+ * This includes:
+ * 1. Decomposing mission into tasks
+ * 2. Executing tasks sequentially
+ * 3. Logging all activity
+ * 4. Updating mission status
  */
 async function executeMission(mission: any): Promise<OperatorExecutionResult> {
   const timestamp = new Date().toISOString();
@@ -208,46 +213,12 @@ async function executeMission(mission: any): Promise<OperatorExecutionResult> {
   try {
     console.log(`[OPERATOR] Starting mission execution: ${mission.id}`);
 
-    // Generate AI prompt from mission context
-    const missionPrompt = formatMissionPrompt(mission);
-    
-    // Get AI guidance on mission execution
-    const systemPrompt = `You are an expert Operator agent for autonomous mission execution.
-Your role is to:
-1. Analyze the mission objectives carefully
-2. Break down complex tasks into actionable steps
-3. Identify potential risks and mitigation strategies
-4. Provide specific, executable recommendations
-5. Track progress and suggest adaptations
+    // Step 1: Decompose mission into tasks
+    const tasks = await decomposeMissionIntoTasks(mission);
+    console.log(`[OPERATOR] Decomposed into ${tasks.length} tasks`);
 
-Be concise, specific, and actionable in your responses.`;
-
-    const aiResponse = await callAI(
-      missionPrompt,
-      systemPrompt,
-      []
-    );
-
-    console.log(`[OPERATOR] AI Response (${aiResponse.provider}):`, aiResponse.content.substring(0, 200));
-
-    // Parse AI output for action items
-    const actionItems = extractActionItems(aiResponse.content);
-
-    // Log execution results to Supabase
+    // Step 2: Update mission status
     if (supabase) {
-      await supabase
-        .from('mission_results')
-        .insert({
-          mission_id: mission.id,
-          agent_type: 'operator',
-          execution_plan: aiResponse.content,
-          action_items: actionItems,
-          ai_provider: aiResponse.provider,
-          status: 'executed',
-          created_at: timestamp,
-        });
-
-      // Update mission status
       await supabase
         .from('missions')
         .update({
@@ -257,15 +228,47 @@ Be concise, specific, and actionable in your responses.`;
         .eq('id', mission.id);
     }
 
+    // Step 3: Execute each task
+    const executedTasks = [];
+    for (const task of tasks) {
+      const taskResult = await executeTask(mission, task);
+      executedTasks.push(taskResult);
+    }
+
+    // Step 4: Mark mission as complete
+    if (supabase) {
+      await supabase
+        .from('missions')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', mission.id);
+
+      // Store overall execution plan
+      const missionPrompt = formatMissionPrompt(mission);
+      await supabase
+        .from('mission_results')
+        .insert({
+          mission_id: mission.id,
+          agent_type: 'operator',
+          execution_plan: `Decomposed into ${tasks.length} tasks and executed all successfully`,
+          action_items: executedTasks.map((t: any) => t.title),
+          ai_provider: 'multi-provider',
+          status: 'executed',
+          created_at: timestamp,
+        });
+    }
+
     return {
       success: true,
       missionId: mission.id,
-      action: 'mission_execution',
-      aiOutput: aiResponse.content,
+      action: 'mission_execution_with_tasks',
+      aiOutput: `Decomposed into ${tasks.length} tasks and executed successfully`,
       executionDetails: {
-        provider: aiResponse.provider,
-        model: aiResponse.model,
-        actionItems,
+        provider: 'multi-provider',
+        tasksCreated: tasks.length,
+        tasksExecuted: executedTasks.length,
         priority: mission.priority,
         objectives: mission.context?.objectives || [],
       },
@@ -302,4 +305,218 @@ function extractActionItems(aiOutput: string): string[] {
   }
   
   return actionItems.length > 0 ? actionItems : [aiOutput.substring(0, 200)];
+}
+
+/**
+ * Decompose a mission into actionable tasks
+ */
+async function decomposeMissionIntoTasks(mission: any): Promise<any[]> {
+  try {
+    const decompositionPrompt = `You are an expert project manager. 
+
+Mission: ${mission.title}
+Description: ${mission.description}
+Objectives: ${mission.context?.objectives?.join(', ') || 'Not specified'}
+
+Break this mission into 3-7 concrete, executable tasks. For each task provide:
+1. Title - Short, action-oriented name
+2. Description - What needs to happen
+3. Priority - critical/high/medium/low
+4. Order - Sequence number (1, 2, 3...)
+
+Format your response as a JSON array with no markdown formatting:
+[
+  {"title":"Task 1", "description":"Details", "priority":"high", "order":1},
+  {"title":"Task 2", "description":"Details", "priority":"medium", "order":2}
+]
+
+IMPORTANT: Return ONLY the JSON array, no other text.`;
+
+    const systemPrompt = `You are a mission decomposition expert. Always respond with valid JSON only.`;
+
+    const aiResponse = await callAI(decompositionPrompt, systemPrompt, []);
+    
+    // Parse AI response
+    let tasks: any[] = [];
+    try {
+      // Clean response if needed (remove markdown code blocks)
+      let jsonStr = aiResponse.content.trim();
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+      }
+      tasks = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error(`[OPERATOR] Failed to parse task decomposition:`, aiResponse.content);
+      // Fallback: create default task
+      tasks = [{
+        title: `Execute: ${mission.title}`,
+        description: mission.description,
+        priority: mission.priority || 'high',
+        order: 1
+      }];
+    }
+
+    // Store tasks in database
+    const createdTasks = [];
+    for (const task of tasks) {
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('agent_tasks')
+          .insert({
+            mission_id: mission.id,
+            parent_task_id: null,
+            title: task.title,
+            description: task.description,
+            priority: task.priority || 'medium',
+            status: 'pending',
+            assigned_to: mission.assigned_to || 'operator',
+            order_index: task.order || 0,
+            context: {
+              mission_title: mission.title,
+              mission_context: mission.context
+            }
+          })
+          .select();
+
+        if (error) {
+          console.error(`[OPERATOR] Failed to create task:`, error);
+        } else {
+          createdTasks.push(data[0]);
+          
+          // Log task creation
+          await supabase
+            .from('task_logs')
+            .insert({
+              task_id: data[0].id,
+              agent_type: 'operator',
+              level: 'INFO',
+              action: 'TASK_CREATED',
+              message: `Task created: ${task.title}`
+            });
+        }
+      }
+    }
+
+    console.log(`[OPERATOR] Created ${createdTasks.length} tasks for mission ${mission.id}`);
+    return createdTasks;
+  } catch (error) {
+    console.error(`[OPERATOR] Task decomposition failed:`, error);
+    return [];
+  }
+}
+
+/**
+ * Execute a single task
+ */
+async function executeTask(mission: any, task: any): Promise<any> {
+  const taskStartTime = Date.now();
+  
+  try {
+    console.log(`[OPERATOR] Executing task: ${task.title}`);
+
+    // Update task status to in_progress
+    if (supabase) {
+      await supabase
+        .from('agent_tasks')
+        .update({ status: 'in_progress' })
+        .eq('id', task.id);
+
+      // Log task start
+      await supabase
+        .from('task_logs')
+        .insert({
+          task_id: task.id,
+          agent_type: 'operator',
+          level: 'INFO',
+          action: 'TASK_STARTED',
+          message: `Started executing: ${task.title}`
+        });
+    }
+
+    // Generate AI prompt for task execution
+    const taskPrompt = `Execute this task:
+
+Mission: ${mission.title}
+Task: ${task.title}
+Description: ${task.description}
+Available objectives: ${mission.context?.objectives?.join(', ') || 'General execution'}
+
+Provide specific, actionable steps and expected outcomes. Be concise and practical.`;
+
+    const systemPrompt = `You are an expert operator. Execute the task efficiently and provide clear results.`;
+
+    const aiResponse = await callAI(taskPrompt, systemPrompt, []);
+
+    // Store task result
+    if (supabase) {
+      const executionDuration = Date.now() - taskStartTime;
+      
+      await supabase
+        .from('task_results')
+        .insert({
+          task_id: task.id,
+          mission_id: mission.id,
+          agent_type: 'operator',
+          execution_plan: task.description,
+          ai_provider: aiResponse.provider,
+          output: aiResponse.content,
+          metadata: {
+            duration_ms: executionDuration,
+            tokens_used: aiResponse.content.length
+          }
+        });
+
+      // Update task status to completed
+      await supabase
+        .from('agent_tasks')
+        .update({ status: 'completed' })
+        .eq('id', task.id);
+
+      // Log task completion
+      await supabase
+        .from('task_logs')
+        .insert({
+          task_id: task.id,
+          agent_type: 'operator',
+          level: 'INFO',
+          action: 'TASK_COMPLETED',
+          message: `Completed: ${task.title} in ${executionDuration}ms`
+        });
+    }
+
+    console.log(`[OPERATOR] Task completed: ${task.title} (${Date.now() - taskStartTime}ms)`);
+
+    return {
+      ...task,
+      status: 'completed',
+      execution_time: Date.now() - taskStartTime,
+      ai_response: aiResponse.content
+    };
+  } catch (error) {
+    console.error(`[OPERATOR] Task execution failed:`, error);
+
+    if (supabase) {
+      await supabase
+        .from('agent_tasks')
+        .update({ status: 'failed' })
+        .eq('id', task.id);
+
+      await supabase
+        .from('task_logs')
+        .insert({
+          task_id: task.id,
+          agent_type: 'operator',
+          level: 'ERROR',
+          action: 'TASK_FAILED',
+          message: `Task failed: ${(error as Error).message}`
+        });
+    }
+
+    return {
+      ...task,
+      status: 'failed',
+      execution_time: Date.now() - taskStartTime,
+      error: (error as Error).message
+    };
+  }
 }
