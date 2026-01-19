@@ -1,7 +1,7 @@
 import { agentCoordinator } from './functions/agent-coordinator';
-import { operatorHealthCheck, operatorMonitorTasks } from './functions/operator';
-import { researcherMarketAnalysis, researcherGithubAnalysis } from './functions/researcher';
-import { scribeDocumentUpdate, scribeLogSummary } from './functions/scribe';
+import { operatorHealthCheck, operatorMonitorTasks } from './functions/operator-functions';
+import { researcherMarketAnalysis, researcherGithubAnalysis } from './functions/researcher-functions';
+import { scribeDocumentUpdate, scribeLogSummary } from './functions/scribe-functions';
 
 export const functions = [
   agentCoordinator,
