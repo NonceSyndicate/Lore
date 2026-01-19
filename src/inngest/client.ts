@@ -32,6 +32,7 @@ export interface AgentTask {
   agent_type: AgentType;
   task_type: string;
   parameters: Record<string, any>;
+    input_data?: any;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   result?: any;
   error?: string;
