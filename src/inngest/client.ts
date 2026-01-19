@@ -9,3 +9,8 @@ export const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_K
       process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
   : null;
+
+  // Initialize Inngest client
+import { Inngest } from 'inngest';
+
+export const inngest = new Inngest({ id: 'nonce-syndicate-lore' });
