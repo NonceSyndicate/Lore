@@ -1,6 +1,6 @@
 import { serve } from 'inngest/next';
 import { inngest } from '@/src/inngest/client';
-import { functions } from '@/src/inngest';
+import { functions } from '@/src/inngest/import { signerOrchestrator } from './functions/signer-orchestrator';';
 
 /**
  * Inngest API Route Handler

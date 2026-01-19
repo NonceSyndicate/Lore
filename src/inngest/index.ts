@@ -13,7 +13,9 @@ export const functions = [
   researcherGithubAnalysis,
   // SCRIBE agent functions
   scribeDocumentUpdate,
-  scribeLogSummary,
+  scribeLogSummary
+    // SIGNER orchestrator
+  signerOrchestrator,,
 ];
 
 export { inngest } from './client';
