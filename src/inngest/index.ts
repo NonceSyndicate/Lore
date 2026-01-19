@@ -1,6 +1,19 @@
-// Export empty functions array temporarily for build
-// Functions will be added after successful deployment
-export const functions: any[] = [];
+import { agentCoordinator } from './functions/agent-coordinator';
+import { operatorHealthCheck, operatorMonitorTasks } from './functions/operator';
+import { researcherMarketAnalysis, researcherGithubAnalysis } from './functions/researcher';
+import { scribeDocumentUpdate, scribeLogSummary } from './functions/scribe';
 
-// Placeholder for Inngest serve compatibility
+export const functions = [
+  agentCoordinator,
+  // OPERATOR agent functions
+  operatorHealthCheck,
+  operatorMonitorTasks,
+  // RESEARCHER agent functions
+  researcherMarketAnalysis,
+  researcherGithubAnalysis,
+  // SCRIBE agent functions
+  scribeDocumentUpdate,
+  scribeLogSummary,
+];
+
 export { inngest } from './client';
