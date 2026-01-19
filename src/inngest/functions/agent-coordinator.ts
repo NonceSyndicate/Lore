@@ -41,12 +41,12 @@ export const agentCoordinator = inngest.createFunction(
     }
 
     // Step 3: Assign tasks to agents
-    const assignments = [];
+    const assignments: Array<{ task: any; agent: any }> = [];
     for (const task of pendingTasks) {
       const agent = idleAgents.find(a => a.agent_type === task.agent_type && a.status === 'idle');
       if (agent) {
         assignments.push({ task, agent });
-        agent.status = 'working'; // Mark locally as working to avoid double assignment
+        agent.status = 'busy'; // Mark locally as working to avoid double assignment
       }
     }
 
