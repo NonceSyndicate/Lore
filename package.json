@@ -6,13 +6,17 @@
   "type": "module",
   "scripts": {
     "dev": "inngest-cli dev",
-    "build": "tsc",
+    "build": "next build",
+        "start": "next start",
     "deploy": "inngest deploy"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0",
     "dotenv": "^16.6.1",
     "inngest": "^3.0.0",
+    "next": "^16.1.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "zod": "^3.22.0"
   },
   "devDependencies": {
