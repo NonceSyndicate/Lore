@@ -1,21 +1,22 @@
-import 'dotenv/config';
 import { Inngest } from 'inngest';
 import { createClient } from '@supabase/supabase-js';
 
-// Use NEXT_PUBLIC_ vars which are available at build time
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Initialize Supabase client (conditional for build-time safety)
+export const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ? createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    )
+  : null;
 
-// Only create client if we have the required values (runtime check)
-export const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null as any; // Placeholder for build time
-
+// Initialize Inngest client
 export const inngest = new Inngest({
-  id: 'nonce-syndicate-agents',
-  name: 'Nonce Syndicate Multi-Agent System',
+  id: 'nonce-syndicate-lore',
+  name: 'Nonce Syndicate Lore',
+  eventKey: process.env.INNGEST_EVENT_KEY,
 });
 
+// Type definitions for agent system
 export type AgentType = 'AUDITOR' | 'NEGOTIATOR' | 'OPERATOR' | 'RESEARCHER' | 'SCRIBE';
 
 export interface AgentState {
@@ -32,7 +33,7 @@ export interface AgentTask {
   agent_type: AgentType;
   task_type: string;
   parameters: Record<string, any>;
-    input_data?: any;
+  input_data?: any;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   result?: any;
   error?: string;
