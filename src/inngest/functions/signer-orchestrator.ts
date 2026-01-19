@@ -1,5 +1,8 @@
 import { inngest } from '../client';
 import { supabase } from '../client';
+import * as operatorAgent from '../../agents/operator';
+import * as researcherAgent from '../../agents/researcher';
+import * as scribeAgent from '../../agents/scribe';
 
 // Types for mission queue
 interface Mission {
@@ -182,6 +185,7 @@ export const signerOrchestrator = inngest.createFunction(
       console.log(`Mission ID: ${mission.id}`);
       console.log(`Title: ${mission.title}`);
       console.log(`Priority: ${mission.priority.toUpperCase()}`);
+      console.log(`Assigned To: ${mission.assigned_to?.toUpperCase() || 'SIGNER'}`);
       console.log(`Description: ${mission.description}`);
       console.log('\nObjectives:');
       mission.context.objectives.forEach((obj, i) => {
@@ -194,17 +198,62 @@ export const signerOrchestrator = inngest.createFunction(
       console.log(`\nBudget Limit: $${mission.context.budget_limit_usd}`);
       console.log(`Autonomous Mode: ${mission.context.autonomous ? 'YES' : 'NO'}`);
       console.log('='.repeat(80));
-      console.log('\n👤 SIGNER: Mission acknowledged. Beginning execution...\n');
     });
 
-    // Step 5: Return mission details for monitoring
+    // Step 5: Route to appropriate agent for execution
+    const executionResult = await step.run('agent-execution', async () => {
+      try {
+        let result;
+        
+        switch (mission.assigned_to) {
+          case 'operator':
+            console.log('🤖 [OPERATOR] Taking control...');
+            result = await operatorAgent.execute('mission_execution', mission);
+            break;
+          case 'researcher':
+            console.log('🔬 [RESEARCHER] Taking control...');
+            result = await researcherAgent.execute('mission_execution', mission);
+            break;
+          case 'scribe':
+            console.log('✍️  [SCRIBE] Taking control...');
+            result = await scribeAgent.execute('mission_execution', mission);
+            break;
+          case 'signer':
+          default:
+            console.log('👤 [SIGNER] Mission acknowledged. Awaiting human decision or external trigger.');
+            result = { status: 'awaiting_signer_input', mission_id: mission.id };
+            break;
+        }
+        
+        return result;
+      } catch (error) {
+        console.error('Agent execution error:', error);
+        throw error;
+      }
+    });
+
+    // Step 6: Log mission execution results
+    await step.run('log-execution-complete', async () => {
+      console.log('\n' + '='.repeat(80));
+      console.log('MISSION EXECUTION COMPLETE');
+      console.log('='.repeat(80));
+      console.log(`Agent: ${mission.assigned_to?.toUpperCase() || 'SIGNER'}`);
+      console.log(`Status: ${executionResult?.success ? 'SUCCESS ✅' : 'PENDING ⏳'}`);
+      if (executionResult?.aiOutput) {
+        console.log(`Output Preview: ${executionResult.aiOutput.substring(0, 150)}...`);
+      }
+      console.log('='.repeat(80) + '\n');
+    });
+
+    // Step 7: Return final status
     return {
       mission_id: mission.id,
       mission_title: mission.title,
+      assigned_to: mission.assigned_to,
       priority: mission.priority,
       status: 'in_progress',
-      context_prepared: true,
-      next_action: 'Waiting for Signer execution (manual trigger or Perplexity task)',
+      agent_execution: executionResult?.success ? 'SUCCESS' : 'PENDING',
+      next_check_in: 'Next scheduled execution in 30 minutes',
       monitoring_url: `https://app.inngest.com/env/production/functions/signer-orchestrator/runs`
     };
   }

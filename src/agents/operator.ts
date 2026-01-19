@@ -1,9 +1,10 @@
 /**
  * OPERATOR Agent - Task Execution & Project Management
- * Handles operational tasks including health checks and monitoring
+ * Handles operational tasks using AI for intelligent decision-making
  */
 
 import { supabase } from '../inngest/client';
+import { callAI, formatMissionPrompt } from '../utils/ai-provider';
 
 export interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -23,6 +24,15 @@ export interface HealthCheckResult {
     in_progress: number;
     completed: number;
   };
+}
+
+export interface OperatorExecutionResult {
+  success: boolean;
+  missionId: string;
+  action: string;
+  aiOutput: string;
+  executionDetails: Record<string, any>;
+  timestamp: string;
 }
 
 export interface MonitorTasksResult {
@@ -182,7 +192,114 @@ export async function execute(taskType: string, inputData: any): Promise<any> {
       return await healthCheck(inputData);
     case 'monitor_tasks':
       return await monitorTasks(inputData);
+    case 'mission_execution':
+      return await executeMission(inputData);
     default:
       throw new Error(`Unknown task type: ${taskType}`);
   }
+}
+
+/**
+ * Execute a mission using AI-driven decision making
+ */
+async function executeMission(mission: any): Promise<OperatorExecutionResult> {
+  const timestamp = new Date().toISOString();
+  
+  try {
+    console.log(`[OPERATOR] Starting mission execution: ${mission.id}`);
+
+    // Generate AI prompt from mission context
+    const missionPrompt = formatMissionPrompt(mission);
+    
+    // Get AI guidance on mission execution
+    const systemPrompt = `You are an expert Operator agent for autonomous mission execution.
+Your role is to:
+1. Analyze the mission objectives carefully
+2. Break down complex tasks into actionable steps
+3. Identify potential risks and mitigation strategies
+4. Provide specific, executable recommendations
+5. Track progress and suggest adaptations
+
+Be concise, specific, and actionable in your responses.`;
+
+    const aiResponse = await callAI(
+      missionPrompt,
+      systemPrompt,
+      []
+    );
+
+    console.log(`[OPERATOR] AI Response (${aiResponse.provider}):`, aiResponse.content.substring(0, 200));
+
+    // Parse AI output for action items
+    const actionItems = extractActionItems(aiResponse.content);
+
+    // Log execution results to Supabase
+    if (supabase) {
+      await supabase
+        .from('mission_results')
+        .insert({
+          mission_id: mission.id,
+          agent_type: 'operator',
+          execution_plan: aiResponse.content,
+          action_items: actionItems,
+          ai_provider: aiResponse.provider,
+          status: 'executed',
+          created_at: timestamp,
+        });
+
+      // Update mission status
+      await supabase
+        .from('missions')
+        .update({
+          status: 'in_progress',
+          started_at: timestamp,
+        })
+        .eq('id', mission.id);
+    }
+
+    return {
+      success: true,
+      missionId: mission.id,
+      action: 'mission_execution',
+      aiOutput: aiResponse.content,
+      executionDetails: {
+        provider: aiResponse.provider,
+        model: aiResponse.model,
+        actionItems,
+        priority: mission.priority,
+        objectives: mission.context?.objectives || [],
+      },
+      timestamp,
+    };
+  } catch (error) {
+    console.error('[OPERATOR] Mission execution failed:', error);
+    return {
+      success: false,
+      missionId: mission.id,
+      action: 'mission_execution',
+      aiOutput: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      executionDetails: { error: true },
+      timestamp,
+    };
+  }
+}
+
+/**
+ * Extract action items from AI response
+ */
+function extractActionItems(aiOutput: string): string[] {
+  const lines = aiOutput.split('\n');
+  const actionItems: string[] = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.match(/^[\d\-*•]/)) {
+      const cleaned = trimmed.replace(/^[\d\-*•]\s*/, '').trim();
+      if (cleaned.length > 5) {
+        actionItems.push(cleaned);
+      }
+    }
+  }
+  
+  return actionItems.length > 0 ? actionItems : [aiOutput.substring(0, 200)];
 }

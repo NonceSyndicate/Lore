@@ -1,9 +1,10 @@
 /**
  * SCRIBE Agent - Documentation & Reporting
- * Generates markdown documentation, daily summaries, and formatted reports
+ * Generates markdown documentation, daily summaries, and formatted reports using AI
  */
 
 import { supabase } from '../inngest/client';
+import { callAI, formatMissionPrompt } from '../utils/ai-provider';
 
 export interface DocumentationResult {
   timestamp: string;
@@ -20,6 +21,15 @@ export interface DailySummaryResult {
   tasksStarted: number;
   tasksFailed: number;
   agentActivity: Record<string, { tasks: number; status: string }>;
+}
+
+export interface ScribeExecutionResult {
+  success: boolean;
+  missionId: string;
+  action: string;
+  aiOutput: string;
+  executionDetails: Record<string, any>;
+  timestamp: string;
 }
 
 async function documentUpdate(inputData: any): Promise<DocumentationResult> {
@@ -160,7 +170,125 @@ export async function execute(taskType: string, inputData: any): Promise<any> {
       return await documentUpdate(inputData);
     case 'log_summary':
       return await logSummary(inputData);
+    case 'mission_execution':
+      return await executeMission(inputData);
     default:
       throw new Error(`Unknown task type: ${taskType}`);
   }
+}
+
+/**
+ * Execute a content generation mission using AI
+ */
+async function executeMission(mission: any): Promise<ScribeExecutionResult> {
+  const timestamp = new Date().toISOString();
+  
+  try {
+    console.log(`[SCRIBE] Starting mission execution: ${mission.id}`);
+
+    // Generate AI prompt from mission context
+    const missionPrompt = formatMissionPrompt(mission);
+    
+    // Get AI guidance on content generation
+    const systemPrompt = `You are an expert Scribe agent specializing in technical documentation, content creation, and comprehensive reporting.
+Your role is to:
+1. Generate clear, well-structured documentation
+2. Create compelling marketing copy and announcements
+3. Produce detailed technical reports
+4. Write social media content and blog posts
+5. Organize and present complex information accessibly
+
+Always use markdown formatting and structure your content with clear headers and sections.`;
+
+    const aiResponse = await callAI(
+      missionPrompt,
+      systemPrompt,
+      []
+    );
+
+    console.log(`[SCRIBE] AI Response (${aiResponse.provider}):`, aiResponse.content.substring(0, 200));
+
+    // Extract generated content
+    const contentSections = extractContentSections(aiResponse.content);
+
+    // Log content generation results to Supabase
+    if (supabase) {
+      await supabase
+        .from('mission_results')
+        .insert({
+          mission_id: mission.id,
+          agent_type: 'scribe',
+          generated_content: aiResponse.content,
+          content_sections: contentSections,
+          ai_provider: aiResponse.provider,
+          status: 'executed',
+          created_at: timestamp,
+        });
+
+      // Update mission status
+      await supabase
+        .from('missions')
+        .update({
+          status: 'in_progress',
+          started_at: timestamp,
+        })
+        .eq('id', mission.id);
+    }
+
+    return {
+      success: true,
+      missionId: mission.id,
+      action: 'mission_execution',
+      aiOutput: aiResponse.content,
+      executionDetails: {
+        provider: aiResponse.provider,
+        model: aiResponse.model,
+        contentSections,
+        priority: mission.priority,
+        objectives: mission.context?.objectives || [],
+      },
+      timestamp,
+    };
+  } catch (error) {
+    console.error('[SCRIBE] Mission execution failed:', error);
+    return {
+      success: false,
+      missionId: mission.id,
+      action: 'mission_execution',
+      aiOutput: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      executionDetails: { error: true },
+      timestamp,
+    };
+  }
+}
+
+/**
+ * Extract content sections from generated content
+ */
+function extractContentSections(content: string): Record<string, string> {
+  const sections: Record<string, string> = {};
+  const headerRegex = /^#+\s+(.+)$/gm;
+  let match;
+  let lastHeader = 'introduction';
+  let currentContent = '';
+
+  const lines = content.split('\n');
+  
+  for (const line of lines) {
+    if (line.match(/^#+\s+/)) {
+      if (lastHeader && currentContent.trim()) {
+        sections[lastHeader] = currentContent.trim();
+      }
+      lastHeader = line.replace(/^#+\s+/, '').toLowerCase().replace(/\s+/g, '_');
+      currentContent = '';
+    } else {
+      currentContent += line + '\n';
+    }
+  }
+  
+  if (lastHeader && currentContent.trim()) {
+    sections[lastHeader] = currentContent.trim();
+  }
+
+  return Object.keys(sections).length > 0 ? sections : { full_content: content };
 }
