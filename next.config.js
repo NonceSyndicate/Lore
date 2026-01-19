@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['inngest'],    serverComponentsExternalPackages: ['inngest'],
-  },
+  serverExternalPackages: ['inngest'],
+};
 
 export default nextConfig;
