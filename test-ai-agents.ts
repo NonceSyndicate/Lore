@@ -3,10 +3,10 @@
  * Verifies that agents can execute missions with AI
  */
 
-import { callAI, formatMissionPrompt } from '../src/utils/ai-provider';
-import * as operatorAgent from '../src/agents/operator';
-import * as researcherAgent from '../src/agents/researcher';
-import * as scribeAgent from '../src/agents/scribe';
+import { callAI, formatMissionPrompt } from './src/utils/ai-provider';
+import * as operatorAgent from './src/agents/operator';
+import * as researcherAgent from './src/agents/researcher';
+import * as scribeAgent from './src/agents/scribe';
 
 const testMission = {
   id: 'test-mission-001',
