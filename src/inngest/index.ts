@@ -15,7 +15,7 @@ export const functions = [
   scribeDocumentUpdate,
   scribeLogSummary
     // SIGNER orchestrator
-  signerOrchestrator,,
+  signerOrchestrator,
 ];
 
 export { inngest } from './client';
