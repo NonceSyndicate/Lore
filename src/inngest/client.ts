@@ -10,7 +10,30 @@ export const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_K
     )
   : null;
 
-  // Initialize Inngest client
-import { Inngest } from 'inngest';
-
+// Initialize Inngest client
 export const inngest = new Inngest({ id: 'nonce-syndicate-lore' });
+
+// Agent type definitions
+export type AgentType = 'AUDITOR' | 'NEGOTIATOR' | 'OPERATOR' | 'RESEARCHER' | 'SCRIBE';
+
+export interface AgentState {
+  id: string;
+  agent_type: AgentType;
+  status: 'idle' | 'active' | 'busy';
+  current_task_id?: string;
+  last_active: string;
+  metadata: Record<string, any>;
+}
+
+export interface AgentTask {
+  id: string;
+  agent_type: AgentType;
+  task_type: string;
+  description: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  priority: number;
+  input_data?: Record<string, any>;
+  output_data?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}

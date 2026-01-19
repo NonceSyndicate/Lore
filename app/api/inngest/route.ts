@@ -8,6 +8,7 @@ import { signerOrchestrator } from '@/src/inngest/functions/signer-orchestrator'
  * Compatible with Next.js App Router and Vercel deployment
  */
 
-export const { GET, POST, PUT } = serve({  client: inngest,
-  ...functions, signerOrchestrator,
+export const { GET, POST, PUT } = serve({
+  client: inngest,
+  functions,
 });
