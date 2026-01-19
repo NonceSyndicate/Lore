@@ -2,6 +2,7 @@ import { agentCoordinator } from './functions/agent-coordinator';
 import { operatorHealthCheck, operatorMonitorTasks } from './functions/operator-functions';
 import { researcherMarketAnalysis, researcherGithubAnalysis } from './functions/researcher-functions';
 import { scribeDocumentUpdate, scribeLogSummary } from './functions/scribe-functions';
+import { signerOrchestrator } from './functions/signer-orchestrator';
 
 export const functions = [
   agentCoordinator,
@@ -14,7 +15,7 @@ export const functions = [
   // SCRIBE agent functions
   scribeDocumentUpdate,
   scribeLogSummary,
-    // SIGNER orchestrator
+  // SIGNER orchestrator
   signerOrchestrator,
 ];
 
