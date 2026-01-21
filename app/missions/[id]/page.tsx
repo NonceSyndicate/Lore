@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useState, useEffect, useRef } from 'react';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 interface MissionReport {
   mission: any;
@@ -20,16 +20,31 @@ interface MissionReport {
 }
 
 export default function MissionReportPage({ params }: { params: { id: string } }) {
-  const supabase = createClientComponentClient();
+  const supabaseRef = useRef<SupabaseClient | null>(null);
+  
+  // Initialize Supabase client once
+  if (!supabaseRef.current) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (supabaseUrl && supabaseAnonKey) {
+      supabaseRef.current = createClient(supabaseUrl, supabaseAnonKey);
+    }
+  }
+  
+  const supabase = supabaseRef.current;
+  
   const [report, setReport] = useState<MissionReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReport();
-  }, [params.id]);
+  }, [params.id]); // Keep params.id since it's a prop
 
   async function fetchReport() {
+    if (!supabase) return;
+    
     try {
       setLoading(true);
       setError(null);

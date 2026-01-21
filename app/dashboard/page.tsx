@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useState, useEffect, useRef } from 'react';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 interface MissionStats {
   id: string;
@@ -44,7 +44,19 @@ interface MissionLog {
 }
 
 export default function DashboardPage() {
-  const supabase = createClientComponentClient();
+  const supabaseRef = useRef<SupabaseClient | null>(null);
+  
+  // Initialize Supabase client once
+  if (!supabaseRef.current) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (supabaseUrl && supabaseAnonKey) {
+      supabaseRef.current = createClient(supabaseUrl, supabaseAnonKey);
+    }
+  }
+  
+  const supabase = supabaseRef.current;
   
   const [missions, setMissions] = useState<MissionStats[]>([]);
   const [agentPerformance, setAgentPerformance] = useState<AgentPerformance[]>([]);
@@ -60,6 +72,8 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
+    if (!supabase) return;
+    
     fetchData();
     
     // Subscribe to realtime updates
@@ -89,9 +103,11 @@ export default function DashboardPage() {
       missionsChannel.unsubscribe();
       logsChannel.unsubscribe();
     };
-  }, [supabase]);
+  }, []); // Empty dependency array since supabase is stable via useRef
 
   async function fetchData() {
+    if (!supabase) return;
+    
     try {
       setLoading(true);
       
@@ -144,6 +160,8 @@ export default function DashboardPage() {
   }
 
   async function fetchRecentLogs() {
+    if (!supabase) return;
+    
     try {
       const { data: logsData } = await supabase
         .from('mission_logs')
