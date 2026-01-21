@@ -66,8 +66,7 @@ export const signerOrchestrator = inngest.createFunction(
         .from('missions')
         .select('*')
         .eq('status', 'pending')
-        .eq('assigned_to', 'signer')
-        .order('priority', { ascending: false })
+      // .eq('assigned_to', 'signer')  // REMOVED: Now fetch missions for ALL agents        .order('priority', { ascending: false })
         .order('created_at', { ascending: true })
         .limit(1)
         .single();
