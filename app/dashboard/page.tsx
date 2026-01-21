@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 interface MissionStats {
@@ -44,19 +44,16 @@ interface MissionLog {
 }
 
 export default function DashboardPage() {
-  const supabaseRef = useRef<SupabaseClient | null>(null);
-  
-  // Initialize Supabase client once
-  if (!supabaseRef.current) {
+  // Initialize Supabase client once with useMemo
+  const supabase = useMemo(() => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
     if (supabaseUrl && supabaseAnonKey) {
-      supabaseRef.current = createClient(supabaseUrl, supabaseAnonKey);
+      return createClient(supabaseUrl, supabaseAnonKey);
     }
-  }
-  
-  const supabase = supabaseRef.current;
+    return null;
+  }, []); // Empty deps - only initialize once
   
   const [missions, setMissions] = useState<MissionStats[]>([]);
   const [agentPerformance, setAgentPerformance] = useState<AgentPerformance[]>([]);
@@ -103,7 +100,7 @@ export default function DashboardPage() {
       missionsChannel.unsubscribe();
       logsChannel.unsubscribe();
     };
-  }, []); // Empty dependency array since supabase is stable via useRef
+  }, []); // Empty dependency array - supabase is stable via useMemo
 
   async function fetchData() {
     if (!supabase) return;
